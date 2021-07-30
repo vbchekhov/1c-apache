@@ -63,6 +63,52 @@ RUN   sed -i'' -e "s|BASE1C|${BASE2}|g" /usr/local/apache2/htdocs/${BASE2}/defau
 
 4. Запускаем команду `docker-compose up -d --build`
 
+### Пример Dockerfile для публикации двух баз
+
+
+> 
+> ❗️ В примере не нет пункта 1. Так как мы делаем запись в `httpd.conf` через `echo`
+> 
+
+```dockerfile
+FROM httpd:2.4
+
+ENV INSTALL=deb64_8_3_16_1814.tar.gz
+ENV SERVER=1c-server
+ENV BASE=db_buh
+# вторая БД
+ENV BASE2=db_zup
+
+COPY ${INSTALL} deb64.tar.gz
+RUN tar -xzf deb64.tar.gz -C / \
+  && apt-get -qq update \
+  && dpkg -i /*.deb \
+  && rm /*.deb 
+
+COPY httpd.conf /usr/local/apache2/conf/httpd.conf
+RUN sed -i'' -e "s|BASE1C|${BASE}|g" /usr/local/apache2/conf/httpd.conf
+
+# запись в `httpd.conf` через `echo` данных о второй БД
+RUN echo "Alias \"/${BASE2}\" \"/usr/local/apache2/htdocs/${BASE2}/\" \n\
+  <Directory \"/usr/local/apache2/htdocs/${BASE2}/\"> \n\
+      AllowOverride All \n\
+      Options None \n\
+      Require all granted \n\
+      SetHandler 1c-application \n\
+      ManagedApplicationDescriptor \"/usr/local/apache2/htdocs/${BASE2}/default.vrd\" \n\
+  </Directory>" >> /usr/local/apache2/conf/httpd.conf 
+
+COPY default.vrd /usr/local/apache2/htdocs/${BASE}/default.vrd
+RUN   sed -i'' -e "s|SERVER1C|${SERVER}|g" /usr/local/apache2/htdocs/${BASE}/default.vrd
+RUN   sed -i'' -e "s|BASE1C|${BASE}|g" /usr/local/apache2/htdocs/${BASE}/default.vrd
+
+# вторая БД
+COPY default.vrd /usr/local/apache2/htdocs/${BASE2}/default.vrd
+RUN   sed -i'' -e "s|SERVER1C|${SERVER}|g" /usr/local/apache2/htdocs/${BASE2}/default.vrd
+RUN   sed -i'' -e "s|BASE1C|${BASE2}|g" /usr/local/apache2/htdocs/${BASE2}/default.vrd
+
+```
+
 
 ## TODO
  
